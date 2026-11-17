@@ -183,6 +183,8 @@ h3 { margin: 22px 0 8px; font-size: 14px; font-weight: 600; text-transform: uppe
       <input id="disc" type="range" min="5" max="60" step="5" value="20">
       <label>Сколько показывать</label>
       <div class="seg" id="topSeg"></div>
+      <label class="check"><input type="checkbox" id="verify" checked> Проверять описание у лучших</label>
+      <p class="hint">Бот откроет до 5 лучших объявлений и прочитает описание и отзывы о продавце: дольше, но точнее. Под результатами будут кнопки 👍/👎, чтобы бот учился на ваших оценках.</p>
     </div>
 
     <div class="card">
@@ -312,7 +314,7 @@ h3 { margin: 22px 0 8px; font-size: 14px; font-weight: 600; text-transform: uppe
 
   /* ---------- описание поиска ---------- */
   function sigOf(p) {
-    return JSON.stringify([p.query.toLowerCase(), p.pmin, p.pmax, p.city, p.seller, p.sort, p.age || null, p.discount, p.top, p.stop]);
+    return JSON.stringify([p.query.toLowerCase(), p.pmin, p.pmax, p.city, p.seller, p.sort, p.age || null, p.discount, p.top, p.verify !== false, p.stop]);
   }
   function metaOf(p) {
     var parts = [];
@@ -323,6 +325,7 @@ h3 { margin: 22px 0 8px; font-size: 14px; font-weight: 600; text-transform: uppe
     if (p.age) parts.push('опубликовано ' + ({ 1: 'за час', 6: 'за 6 ч', 24: 'за сутки', 72: 'за 3 дня', 168: 'за неделю' }[p.age] || p.age + ' ч'));
     parts.push('выгода ≥' + p.discount + '%');
     parts.push('топ ' + p.top);
+    if (p.verify === false) parts.push('без проверки описаний');
     if (p.stop.length) parts.push('без: ' + p.stop.join(', '));
     return parts.join(' · ');
   }
@@ -340,6 +343,7 @@ h3 { margin: 22px 0 8px; font-size: 14px; font-weight: 600; text-transform: uppe
       age: $('age').value === '' ? null : Number($('age').value),
       discount: Number($('disc').value),
       top: state.top,
+      verify: $('verify').checked,
       stop: state.stop.slice()
     };
   }
@@ -354,6 +358,7 @@ h3 { margin: 22px 0 8px; font-size: 14px; font-weight: 600; text-transform: uppe
     $('disc').value = p.discount || DEFAULTS.discount;
     $('discVal').textContent = $('disc').value;
     state.top = p.top || DEFAULTS.top;
+    $('verify').checked = p.verify !== false;
     state.stop = (p.stop || []).slice();
     renderTop();
     renderChips();
@@ -363,6 +368,7 @@ h3 { margin: 22px 0 8px; font-size: 14px; font-weight: 600; text-transform: uppe
     $('discVal').textContent = $('disc').value;
     state.top = [5, 10, 15].indexOf(set.top) !== -1 ? set.top : DEFAULTS.top;
     state.stop = Array.isArray(set.stop) ? set.stop.slice(0, MAX_STOP) : DEFAULTS.stop.slice();
+    $('verify').checked = set.verify !== false;
     renderTop();
     renderChips();
   }
@@ -507,7 +513,7 @@ h3 { margin: 22px 0 8px; font-size: 14px; font-weight: 600; text-transform: uppe
   }
   function rememberSearch(p) {
     state.hist = remember(state.hist, p, MAX_HIST);
-    var settings = { discount: p.discount, top: p.top, stop: p.stop };
+    var settings = { discount: p.discount, top: p.top, verify: p.verify, stop: p.stop };
     return Promise.all([
       storeSet('hist', pack(state.hist)),
       storeSet('settings', JSON.stringify(settings))
